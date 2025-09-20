@@ -10,9 +10,8 @@ from azure.ai.ml.entities import (
     PipelineJob,
     ResourceConfiguration,
     UserIdentityConfiguration,
-    Output,
 )
-from azure.ai.ml import command
+from azure.ai.ml import command, Output
 from azure.identity import DefaultAzureCredential
 import sys
 import os
