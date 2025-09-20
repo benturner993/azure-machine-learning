@@ -39,8 +39,7 @@ def create_environment():
     return Environment(
         name="ml-training-env",
         description="Environment for ML training pipeline",
-        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest",
-        conda_file="conda.yml",
+        image="mcr.microsoft.com/azureml/curated/sklearn-1.0-ubuntu20.04-py38-cpu:latest",
     )
 
 def create_training_pipeline():
