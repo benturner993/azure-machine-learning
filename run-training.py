@@ -8,7 +8,7 @@ from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
     Environment,
     PipelineJob,
-    ResourceConfiguration,
+    JobResourceConfiguration,
     UserIdentityConfiguration,
 )
 from azure.ai.ml import command, Output
@@ -53,7 +53,7 @@ def create_training_pipeline():
         code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
-        resources=ResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
+        resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
         outputs={
             "processed_data": Output(type="uri_folder", path="./data/"),
@@ -68,7 +68,7 @@ def create_training_pipeline():
         code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
-        resources=ResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
+        resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
         inputs={
             "input_data": data_step.outputs.processed_data,
