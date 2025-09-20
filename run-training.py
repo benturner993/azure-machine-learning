@@ -15,6 +15,7 @@ from azure.ai.ml import command, Output
 from azure.identity import DefaultAzureCredential
 import sys
 import os
+from datetime import datetime
 
 # Import configuration
 from config.settings import get_azure_config, is_configured, print_status, COMPUTE_NAME
@@ -45,37 +46,46 @@ def create_environment():
 def create_training_pipeline():
     """Create the training pipeline: Data Processing → Model Training"""
     
+    # Create unique timestamp for job names
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    
     # Step 1: Data Processing
     data_step = command(
-        name="data_processing",
-        command="python data_processing.py",
+        name=f"data_processing_{timestamp}",
+        command="python data_processing.py && echo 'data processing complete' > ${{outputs.completion_flag}}/done.txt",
         code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
+        outputs={
+            "completion_flag": Output(type="uri_folder")
+        }
     )
     
-    # Step 2: Model Training
+    # Step 2: Model Training (runs after data processing)
     training_step = command(
-        name="model_training",
+        name=f"model_training_{timestamp}",
         command="python model_training.py",
         code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
+        inputs={
+            "wait_for_data": data_step.outputs.completion_flag
+        }
     )
     
     # Create pipeline
     pipeline = PipelineJob(
-        name="training-pipeline",
+        name=f"training-pipeline-{timestamp}",
         description="Training Pipeline: Data Processing → Model Training",
         jobs={
             "data_processing": data_step,
             "model_training": training_step
         },
-        display_name="Training Pipeline",
+        display_name=f"Training Pipeline {timestamp}",
     )
     
     return pipeline
