@@ -71,8 +71,8 @@ def create_training_pipeline():
         resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
         inputs={
-            "input_data": data_step.outputs.processed_data,
-            "scaler_path": data_step.outputs.scaler
+            "input_data": "${{parent.jobs.data_processing.outputs.processed_data}}",
+            "scaler_path": "${{parent.jobs.data_processing.outputs.scaler}}"
         },
         outputs={
             "trained_model": Output(type="uri_folder", path="./models/trained/"),

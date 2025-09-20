@@ -71,8 +71,8 @@ def create_inference_pipeline():
         resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
         inputs={
-            "processed_data": data_step.outputs.processed_data,
-            "scaler_path": data_step.outputs.scaler
+            "processed_data": "${{parent.jobs.data_processing.outputs.processed_data}}",
+            "scaler_path": "${{parent.jobs.data_processing.outputs.scaler}}"
         },
         outputs={
             "inference_results": Output(type="uri_folder", path="./outputs/")
