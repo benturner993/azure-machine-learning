@@ -8,11 +8,11 @@ from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
     Environment,
     PipelineJob,
-    PythonJob,
     ResourceConfiguration,
     UserIdentityConfiguration,
     Output,
 )
+from azure.ai.ml import command
 from azure.identity import DefaultAzureCredential
 import sys
 import os
@@ -48,9 +48,10 @@ def create_inference_pipeline():
     """Create the inference pipeline: Data Processing → Inference"""
     
     # Step 1: Data Processing (for inference data)
-    data_step = PythonJob(
+    data_step = command(
         name="data_processing",
-        source="./steps/data_processing.py",
+        command="python data_processing.py --output_data ${{outputs.processed_data}} --scaler_output ${{outputs.scaler}}",
+        code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=ResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
@@ -62,9 +63,10 @@ def create_inference_pipeline():
     )
     
     # Step 2: Inference & Model Registration
-    inference_step = PythonJob(
+    inference_step = command(
         name="inference",
-        source="./steps/inference.py",
+        command="python inference.py --processed_data ${{inputs.processed_data}} --scaler_path ${{inputs.scaler_path}} --inference_output ${{outputs.inference_results}}",
+        code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=ResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),

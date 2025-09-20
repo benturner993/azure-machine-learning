@@ -8,11 +8,11 @@ from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
     Environment,
     PipelineJob,
-    PythonJob,
     ResourceConfiguration,
     UserIdentityConfiguration,
     Output,
 )
+from azure.ai.ml import command
 from azure.identity import DefaultAzureCredential
 import sys
 import os
@@ -48,9 +48,10 @@ def create_training_pipeline():
     """Create the training pipeline: Data Processing → Model Training"""
     
     # Step 1: Data Processing
-    data_step = PythonJob(
+    data_step = command(
         name="data_processing",
-        source="./steps/data_processing.py",
+        command="python data_processing.py --output_data ${{outputs.processed_data}} --scaler_output ${{outputs.scaler}}",
+        code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=ResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
@@ -62,9 +63,10 @@ def create_training_pipeline():
     )
     
     # Step 2: Model Training
-    training_step = PythonJob(
+    training_step = command(
         name="model_training",
-        source="./steps/model_training.py",
+        command="python model_training.py --input_data ${{inputs.input_data}} --scaler_path ${{inputs.scaler_path}} --model_output ${{outputs.trained_model}} --metrics_output ${{outputs.metrics}}",
+        code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=ResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
