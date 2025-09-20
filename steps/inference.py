@@ -20,14 +20,11 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from config.settings import get_azure_config, is_configured, MODEL_NAME, DATA_FEATURES
 
-def perform_inference_and_register(processed_data_path, scaler_path, inference_output_path, model_name=None):
+def perform_inference_and_register(model_name=None):
     """
-    Perform inference on processed data and register the model to ML registry
+    Perform inference on generated data and register the model to ML registry
     
     Args:
-        processed_data_path (str): Path to processed data
-        scaler_path (str): Path to scaler
-        inference_output_path (str): Path to save inference results
         model_name (str): Name for model registration
     """
     print("Starting inference and model registration step...")
@@ -36,17 +33,48 @@ def perform_inference_and_register(processed_data_path, scaler_path, inference_o
     if model_name is None:
         model_name = MODEL_NAME
     
-    # Load processed data
-    print(f"Loading processed data from: {processed_data_path}")
-    processed_data_file = os.path.join(processed_data_path, "processed_data.csv")
-    df = pd.read_csv(processed_data_file)
+    # Generate the same data as in other steps
+    from sklearn.datasets import make_classification
+    from sklearn.preprocessing import StandardScaler
+    from config.settings import DATA_SAMPLES, DATA_FEATURES
     
-    # Load scaler
-    print(f"Loading scaler from: {scaler_path}")
-    scaler_file = os.path.join(scaler_path, "scaler.pkl")
-    scaler = joblib.load(scaler_file)
+    print("Generating inference data...")
+    X, y = make_classification(
+        n_samples=DATA_SAMPLES,
+        n_features=DATA_FEATURES,
+        n_informative=8,
+        n_redundant=2,
+        n_clusters_per_class=1,
+        random_state=42,
+        class_sep=0.8
+    )
     
-    # Get feature columns (all except target)
+    # Create feature names
+    feature_names = [f'feature_{i+1}' for i in range(X.shape[1])]
+    
+    # Create DataFrame
+    df = pd.DataFrame(X, columns=feature_names)
+    df['target'] = y
+    
+    # Preprocessing (same as other steps)
+    feature_columns = [col for col in df.columns if col != 'target']
+    X_features = df[feature_columns]
+    y_target = df['target']
+    
+    # Standardize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_features)
+    
+    # Create new DataFrame with scaled features
+    df_scaled = pd.DataFrame(X_scaled, columns=feature_columns)
+    df_scaled['target'] = y_target
+    
+    # Feature engineering
+    df_scaled['feature_1_squared'] = df_scaled['feature_1'] ** 2
+    df_scaled['feature_interaction'] = df_scaled['feature_1'] * df_scaled['feature_2']
+    df_scaled['feature_sum'] = df_scaled[['feature_1', 'feature_2', 'feature_3']].sum(axis=1)
+    
+    df = df_scaled
     feature_columns = [col for col in df.columns if col != 'target']
     
     # Use the processed data for inference (simulate inference on new data)
@@ -80,11 +108,7 @@ def perform_inference_and_register(processed_data_path, scaler_path, inference_o
     inference_results['prediction_probability_class_0'] = y_pred_proba[:, 0]
     inference_results['prediction_probability_class_1'] = y_pred_proba[:, 1]
     
-    # Save inference results
-    os.makedirs(os.path.dirname(inference_output_path), exist_ok=True)
-    inference_results.to_csv(inference_output_path, index=False)
-    
-    print(f"Inference completed. Results saved to: {inference_output_path}")
+    print(f"Inference completed!")
     print(f"Test accuracy: {accuracy:.4f}")
     print(f"Number of predictions: {len(y_pred)}")
     
@@ -111,10 +135,11 @@ def perform_inference_and_register(processed_data_path, scaler_path, inference_o
             workspace_name=config["workspace_name"],
         )
         
-        # Save the mock model for registration
-        model_path = os.path.join(inference_output_path, "model.pkl")
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
-        joblib.dump(mock_model, model_path)
+    # Save the mock model for registration (in memory for demo)
+    import tempfile
+    temp_dir = tempfile.mkdtemp()
+    model_path = os.path.join(temp_dir, "model.pkl")
+    joblib.dump(mock_model, model_path)
         
         # Create model entity
         model_entity = Model(
@@ -148,24 +173,8 @@ def perform_inference_and_register(processed_data_path, scaler_path, inference_o
 
 def main():
     """Main function for the inference and model registration step"""
-    parser = argparse.ArgumentParser(description="Inference and Model Registration Step")
-    parser.add_argument("--processed_data", type=str, help="Path to processed data")
-    parser.add_argument("--scaler_path", type=str, help="Path to scaler")
-    parser.add_argument("--inference_output", type=str, help="Inference results output path")
-    parser.add_argument("--model_name", type=str, help="Model name for registration")
-    
-    args = parser.parse_args()
-    
-    # Set default paths if not provided
-    processed_data_path = args.processed_data or "data/processed_data.csv"
-    scaler_path = args.scaler_path or "models/scaler.pkl"
-    inference_output_path = args.inference_output or "outputs/inference_results.csv"
-    model_name = args.model_name or MODEL_NAME
-    
     # Perform inference and register model
-    inference_results, registered_model = perform_inference_and_register(
-        processed_data_path, scaler_path, inference_output_path, model_name
-    )
+    inference_results, registered_model = perform_inference_and_register()
     
     print("Inference and model registration step completed successfully!")
 

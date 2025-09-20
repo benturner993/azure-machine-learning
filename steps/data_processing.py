@@ -17,13 +17,9 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from config.settings import DATA_SAMPLES, DATA_FEATURES
 
-def generate_and_process_data(output_data_path, scaler_output_path):
+def generate_and_process_data():
     """
     Generate synthetic data using scikit-learn and process it
-    
-    Args:
-        output_data_path (str): Path to save processed data
-        scaler_output_path (str): Path to save fitted scaler
     """
     print("Starting data generation and processing step...")
     
@@ -71,34 +67,15 @@ def generate_and_process_data(output_data_path, scaler_output_path):
     df_scaled['feature_interaction'] = df_scaled['feature_1'] * df_scaled['feature_2']
     df_scaled['feature_sum'] = df_scaled[['feature_1', 'feature_2', 'feature_3']].sum(axis=1)
     
-    # Save processed data
-    os.makedirs(os.path.dirname(output_data_path), exist_ok=True)
-    df_scaled.to_csv(output_data_path, index=False)
-    
-    # Save scaler for later use
-    os.makedirs(os.path.dirname(scaler_output_path), exist_ok=True)
-    joblib.dump(scaler, scaler_output_path)
-    
-    print(f"Data processing completed. Processed data saved to: {output_data_path}")
-    print(f"Scaler saved to: {scaler_output_path}")
+    print(f"Data processing completed!")
     print(f"Processed data shape: {df_scaled.shape}")
     
     return df_scaled, scaler
 
 def main():
     """Main function for the data generation and processing step"""
-    parser = argparse.ArgumentParser(description="Data Generation and Processing Step")
-    parser.add_argument("--output_data", type=str, help="Output data path")
-    parser.add_argument("--scaler_output", type=str, help="Scaler output path")
-    
-    args = parser.parse_args()
-    
-    # Set default paths if not provided
-    output_data_path = args.output_data or "data/processed_data.csv"
-    scaler_output_path = args.scaler_output or "models/scaler.pkl"
-    
     # Generate and process the data
-    processed_df, scaler = generate_and_process_data(output_data_path, scaler_output_path)
+    processed_df, scaler = generate_and_process_data()
     
     print("Data generation and processing step completed successfully!")
 

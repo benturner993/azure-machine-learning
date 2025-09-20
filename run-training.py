@@ -49,35 +49,23 @@ def create_training_pipeline():
     # Step 1: Data Processing
     data_step = command(
         name="data_processing",
-        command="python data_processing.py --output_data ${{outputs.processed_data}} --scaler_output ${{outputs.scaler}}",
+        command="python data_processing.py",
         code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
-        outputs={
-            "processed_data": Output(type="uri_folder", path="./data/"),
-            "scaler": Output(type="uri_folder", path="./models/scaler/")
-        }
     )
     
     # Step 2: Model Training
     training_step = command(
         name="model_training",
-        command="python model_training.py --input_data ${{inputs.input_data}} --scaler_path ${{inputs.scaler_path}} --model_output ${{outputs.trained_model}} --metrics_output ${{outputs.metrics}}",
+        command="python model_training.py",
         code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
-        inputs={
-            "input_data": "${{parent.jobs.data_processing.outputs.processed_data}}",
-            "scaler_path": "${{parent.jobs.data_processing.outputs.scaler}}"
-        },
-        outputs={
-            "trained_model": Output(type="uri_folder", path="./models/trained/"),
-            "metrics": Output(type="uri_folder", path="./metrics/")
-        }
     )
     
     # Create pipeline

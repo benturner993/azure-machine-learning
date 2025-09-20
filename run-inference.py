@@ -49,34 +49,23 @@ def create_inference_pipeline():
     # Step 1: Data Processing (for inference data)
     data_step = command(
         name="data_processing",
-        command="python data_processing.py --output_data ${{outputs.processed_data}} --scaler_output ${{outputs.scaler}}",
+        command="python data_processing.py",
         code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
-        outputs={
-            "processed_data": Output(type="uri_folder", path="./data/"),
-            "scaler": Output(type="uri_folder", path="./models/scaler/")
-        }
     )
     
     # Step 2: Inference & Model Registration
     inference_step = command(
         name="inference",
-        command="python inference.py --processed_data ${{inputs.processed_data}} --scaler_path ${{inputs.scaler_path}} --inference_output ${{outputs.inference_results}}",
+        command="python inference.py",
         code="./steps/",
         compute=COMPUTE_NAME,
         environment=create_environment(),
         resources=JobResourceConfiguration(instance_count=1, instance_type="Standard_DS3_v2"),
         identity=UserIdentityConfiguration(),
-        inputs={
-            "processed_data": "${{parent.jobs.data_processing.outputs.processed_data}}",
-            "scaler_path": "${{parent.jobs.data_processing.outputs.scaler}}"
-        },
-        outputs={
-            "inference_results": Output(type="uri_folder", path="./outputs/")
-        }
     )
     
     # Create pipeline

@@ -14,25 +14,54 @@ from sklearn.metrics import accuracy_score, classification_report
 from azure.ai.ml import MLClient, Input, Output
 from azure.identity import DefaultAzureCredential
 
-def train_model(input_data_path, scaler_path, model_output_path, metrics_output_path):
+def train_model():
     """
-    Train a machine learning model on the processed data
-    
-    Args:
-        input_data_path (str): Path to processed data
-        scaler_path (str): Path to fitted scaler
-        model_output_path (str): Path to save trained model
-        metrics_output_path (str): Path to save training metrics
+    Train a machine learning model on generated data
     """
     print("Starting model training step...")
     
-    # Load processed data
-    print(f"Loading processed data from: {input_data_path}")
-    df = pd.read_csv(input_data_path)
+    # Generate the same data as in data processing step
+    from sklearn.datasets import make_classification
+    from sklearn.preprocessing import StandardScaler
+    from config.settings import DATA_SAMPLES, DATA_FEATURES
     
-    # Load scaler
-    print(f"Loading scaler from: {scaler_path}")
-    scaler = joblib.load(scaler_path)
+    print("Generating training data...")
+    X, y = make_classification(
+        n_samples=DATA_SAMPLES,
+        n_features=DATA_FEATURES,
+        n_informative=8,
+        n_redundant=2,
+        n_clusters_per_class=1,
+        random_state=42,
+        class_sep=0.8
+    )
+    
+    # Create feature names
+    feature_names = [f'feature_{i+1}' for i in range(X.shape[1])]
+    
+    # Create DataFrame
+    df = pd.DataFrame(X, columns=feature_names)
+    df['target'] = y
+    
+    # Preprocessing (same as data processing step)
+    feature_columns = [col for col in df.columns if col != 'target']
+    X_features = df[feature_columns]
+    y_target = df['target']
+    
+    # Standardize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_features)
+    
+    # Create new DataFrame with scaled features
+    df_scaled = pd.DataFrame(X_scaled, columns=feature_columns)
+    df_scaled['target'] = y_target
+    
+    # Feature engineering
+    df_scaled['feature_1_squared'] = df_scaled['feature_1'] ** 2
+    df_scaled['feature_interaction'] = df_scaled['feature_1'] * df_scaled['feature_2']
+    df_scaled['feature_sum'] = df_scaled[['feature_1', 'feature_2', 'feature_3']].sum(axis=1)
+    
+    df = df_scaled
     
     # Prepare features and target
     feature_columns = [col for col in df.columns if col != 'target']
@@ -81,51 +110,19 @@ def train_model(input_data_path, scaler_path, model_output_path, metrics_output_
         'feature_importance_std': float(np.std(model.feature_importances_))
     }
     
-    # Save model and scaler together
-    model_package = {
-        'model': model,
-        'scaler': scaler,
-        'feature_columns': feature_columns
-    }
-    
-    os.makedirs(os.path.dirname(model_output_path), exist_ok=True)
-    joblib.dump(model_package, model_output_path)
-    
-    # Save metrics
-    os.makedirs(os.path.dirname(metrics_output_path), exist_ok=True)
-    with open(metrics_output_path, 'w') as f:
-        for key, value in metrics.items():
-            f.write(f"{key}: {value}\n")
-    
     print(f"Model training completed!")
-    print(f"Model package saved to: {model_output_path}")
-    print(f"Metrics saved to: {metrics_output_path}")
     print(f"Test accuracy: {accuracy:.4f}")
     
     # Print detailed classification report
     print("\nClassification Report:")
     print(classification_report(y_test, y_pred))
     
-    return model_package, metrics
+    return model, metrics
 
 def main():
     """Main function for the model training step"""
-    parser = argparse.ArgumentParser(description="Model Training Step")
-    parser.add_argument("--input_data", type=str, help="Input processed data path")
-    parser.add_argument("--scaler_path", type=str, help="Scaler path")
-    parser.add_argument("--model_output", type=str, help="Model output path")
-    parser.add_argument("--metrics_output", type=str, help="Metrics output path")
-    
-    args = parser.parse_args()
-    
-    # Set default paths if not provided
-    input_data_path = args.input_data or "data/processed_data.csv"
-    scaler_path = args.scaler_path or "models/scaler.pkl"
-    model_output_path = args.model_output or "models/trained_model.pkl"
-    metrics_output_path = args.metrics_output or "metrics/training_metrics.txt"
-    
     # Train the model
-    model_package, metrics = train_model(input_data_path, scaler_path, model_output_path, metrics_output_path)
+    model, metrics = train_model()
     
     print("Model training step completed successfully!")
 
